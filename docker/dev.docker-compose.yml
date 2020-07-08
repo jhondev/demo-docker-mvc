@@ -1,0 +1,36 @@
+# Please refer https://aka.ms/HTTPSinContainer on how to setup an https developer certificate for your ASP .NET Core service.
+version: "3.4"
+
+services:
+  postgres_container:
+    image: postgres
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: users_db
+    ports:
+      - 5003:5432
+    volumes:
+      - ../postgresql/data:/var/lib/postgresql/data
+
+  flyway:
+    image: flyway/flyway
+    depends_on:
+      - postgres_container
+    command: -url=jdbc:postgresql://postgres_container/users_db -schemas=public -user=postgres -password=postgres -connectRetries=60 migrate
+    volumes:
+      - ../db/migrations:/flyway/sql
+
+  dockermvc_container:
+    image: dockermvcapp_dev_compose
+    depends_on:
+      - postgres_container
+    build:
+      context: ../.
+      dockerfile: docker/dev.Dockerfile
+    # Remaining configs are in Properties/launchSettings.json
+    ports:
+      - 5000:5000
+      - 5001:5001
+    volumes:
+      - ../DockerMVCApp:/src/app
